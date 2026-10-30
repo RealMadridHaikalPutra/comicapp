@@ -3,10 +3,10 @@ package com.comicapp.comicapp.web.admin;
 import org.springframework.context.annotation.Lazy;
 import jakarta.annotation.PostConstruct;
 import com.comicapp.comicapp.model.Comic;
-import com.comicapp.comicapp.model.Chapter;
+import com.comicapp.comicapp.model.Purchase;
 import com.comicapp.comicapp.model.User;
 import com.comicapp.comicapp.service.ComicService;
-import com.comicapp.comicapp.service.ChapterService;
+import com.comicapp.comicapp.service.PurchaseService;
 import com.comicapp.comicapp.web.auth.LoginForm;
 import com.comicapp.comicapp.util.SessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,7 @@ public class AdminDashboardFrame extends JFrame {
     @Autowired
     private ComicService comicService;
     @Autowired
-    private ChapterService chapterService;
+    private PurchaseService purchaseService;
     @Autowired
     private LoginForm loginForm;
 
@@ -32,7 +32,7 @@ public class AdminDashboardFrame extends JFrame {
     private DefaultTableModel modelComic;
 
     public AdminDashboardFrame() {
-        setTitle("Dashboard Admin - Pengelolaan Konten Komik");
+        setTitle("Dashboard Admin - Penjualan Komik Digital");
         setSize(900, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -58,7 +58,7 @@ public class AdminDashboardFrame extends JFrame {
         add(topPanel, BorderLayout.NORTH);
 
         // Center Panel: Comic Table
-        modelComic = new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Penulis/Ilustrator", "Sinopsis"}, 0);
+        modelComic = new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Penulis/Ilustrator", "Harga", "Sinopsis"}, 0);
         tableComic = new JTable(modelComic);
         add(new JScrollPane(tableComic), BorderLayout.CENTER);
 
@@ -67,12 +67,12 @@ public class AdminDashboardFrame extends JFrame {
         JButton btnAddComic = new JButton("Tambah Komik");
         JButton btnEditComic = new JButton("Ubah Komik");
         JButton btnDeleteComic = new JButton("Hapus Komik");
-        JButton btnManageChapter = new JButton("Kelola Chapter");
+        JButton btnSales = new JButton("Data Penjualan");
 
         panelButtons.add(btnAddComic);
         panelButtons.add(btnEditComic);
         panelButtons.add(btnDeleteComic);
-        panelButtons.add(btnManageChapter);
+        panelButtons.add(btnSales);
         add(panelButtons, BorderLayout.SOUTH);
 
         loadComicData();
@@ -114,38 +114,28 @@ public class AdminDashboardFrame extends JFrame {
             }
         });
 
-        btnManageChapter.addActionListener(e -> {
-            int row = tableComic.getSelectedRow();
-            if (row == -1) {
-                JOptionPane.showMessageDialog(this, "Pilih komik terlebih dahulu untuk mengelola chapter!");
-                return;
-            }
-            Long id = (Long) modelComic.getValueAt(row, 0);
-            Comic comic = comicService.getComicById(id).orElse(null);
-            if (comic != null) {
-                showChapterManagementDialog(comic);
-            }
-        });
+        btnSales.addActionListener(e -> showSalesDialog());
     }
 
     public void loadComicData() {
         modelComic.setRowCount(0);
         List<Comic> comics = comicService.getAllComics();
         for (Comic c : comics) {
-            modelComic.addRow(new Object[]{c.getId(), c.getTitle(), c.getGenre(), c.getAuthorOrIllustrator(), c.getSynopsis()});
+            modelComic.addRow(new Object[]{c.getId(), c.getTitle(), c.getGenre(), c.getAuthorOrIllustrator(), formatHarga(c.getPrice()), c.getSynopsis()});
         }
     }
 
     private void showComicForm(Comic existingComic) {
         JDialog dialog = new JDialog(this, existingComic == null ? "Tambah Komik" : "Ubah Komik", true);
-        dialog.setSize(400, 350);
+        dialog.setSize(400, 380);
         dialog.setLocationRelativeTo(this);
-        dialog.setLayout(new GridLayout(6, 2, 5, 5));
+        dialog.setLayout(new GridLayout(7, 2, 5, 5));
 
         JTextField txtTitle = new JTextField(existingComic != null ? existingComic.getTitle() : "");
         JTextField txtGenre = new JTextField(existingComic != null ? existingComic.getGenre() : "");
         JTextField txtAuthor = new JTextField(existingComic != null ? existingComic.getAuthorOrIllustrator() : "");
         JTextField txtCover = new JTextField(existingComic != null ? existingComic.getCoverUrl() : "");
+        JTextField txtPrice = new JTextField(existingComic != null ? String.valueOf(existingComic.getPrice()) : "");
         JTextArea txtSynopsis = new JTextArea(existingComic != null ? existingComic.getSynopsis() : "");
 
         dialog.add(new JLabel(" Judul:"));
@@ -156,6 +146,8 @@ public class AdminDashboardFrame extends JFrame {
         dialog.add(txtAuthor);
         dialog.add(new JLabel(" Cover URL:"));
         dialog.add(txtCover);
+        dialog.add(new JLabel(" Harga (Rp):"));
+        dialog.add(txtPrice);
         dialog.add(new JLabel(" Sinopsis:"));
         dialog.add(new JScrollPane(txtSynopsis));
 
@@ -165,10 +157,23 @@ public class AdminDashboardFrame extends JFrame {
 
         btnSave.addActionListener(e -> {
             Comic comic = existingComic != null ? existingComic : new Comic();
+
+            double price;
+            try {
+                price = Double.parseDouble(txtPrice.getText().trim());
+                if (price < 0) {
+                    throw new NumberFormatException();
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Harga harus berupa angka dan tidak boleh negatif!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             comic.setTitle(txtTitle.getText().trim());
             comic.setGenre(txtGenre.getText().trim());
             comic.setAuthorOrIllustrator(txtAuthor.getText().trim());
             comic.setCoverUrl(txtCover.getText().trim());
+            comic.setPrice(price);
             comic.setSynopsis(txtSynopsis.getText().trim());
 
             comicService.saveComic(comic);
@@ -180,67 +185,41 @@ public class AdminDashboardFrame extends JFrame {
         dialog.setVisible(true);
     }
 
-    private void showChapterManagementDialog(Comic comic) {
-        JDialog dialog = new JDialog(this, "Kelola Chapter - " + comic.getTitle(), true);
-        dialog.setSize(550, 400);
+    private void showSalesDialog() {
+        JDialog dialog = new JDialog(this, "Data Penjualan Komik", true);
+        dialog.setSize(700, 420);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
 
-        DefaultTableModel chModel = new DefaultTableModel(new String[]{"ID", "No. Chapter", "Judul Chapter"}, 0);
-        JTable chTable = new JTable(chModel);
-        dialog.add(new JScrollPane(chTable), BorderLayout.CENTER);
+        DefaultTableModel salesModel = new DefaultTableModel(new String[]{"ID", "Pembeli", "Judul Komik", "Harga", "Tanggal Pembelian"}, 0);
+        JTable salesTable = new JTable(salesModel);
+        dialog.add(new JScrollPane(salesTable), BorderLayout.CENTER);
 
-        Runnable loadChapters = () -> {
-            chModel.setRowCount(0);
-            List<Chapter> chapters = chapterService.getChaptersByComicId(comic.getId());
-            for (Chapter ch : chapters) {
-                chModel.addRow(new Object[]{ch.getId(), ch.getChapterNumber(), ch.getTitle()});
+        List<Purchase> purchases = purchaseService.getAllPurchases();
+        double total = 0;
+        for (Purchase p : purchases) {
+            salesModel.addRow(new Object[]{
+                p.getId(),
+                p.getUser().getUsername(),
+                p.getComic().getTitle(),
+                formatHarga(p.getPrice()),
+                p.getPurchasedAt().toString()
+            });
+            if (p.getPrice() != null) {
+                total += p.getPrice();
             }
-        };
-        loadChapters.run();
+        }
 
-        JPanel btnPanel = new JPanel();
-        JButton btnAddCh = new JButton("Tambah Chapter");
-        JButton btnDelCh = new JButton("Hapus Chapter");
-        btnPanel.add(btnAddCh);
-        btnPanel.add(btnDelCh);
-        dialog.add(btnPanel, BorderLayout.SOUTH);
-
-        btnAddCh.addActionListener(e -> {
-            String numStr = JOptionPane.showInputDialog(dialog, "Masukkan Nomor Chapter (contoh: 1 atau 1.5):");
-            if (numStr == null) return;
-            String title = JOptionPane.showInputDialog(dialog, "Masukkan Judul Chapter:");
-            if (title == null) return;
-
-            try {
-                Double num = Double.parseDouble(numStr);
-                Chapter ch = new Chapter();
-                ch.setChapterNumber(num);
-                ch.setTitle(title);
-                ch.setComic(comic);
-                chapterService.saveChapter(ch);
-                JOptionPane.showMessageDialog(dialog, "Chapter berhasil ditambahkan!");
-                loadChapters.run();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Nomor chapter harus berupa angka!", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        btnDelCh.addActionListener(e -> {
-            int row = chTable.getSelectedRow();
-            if (row == -1) {
-                JOptionPane.showMessageDialog(dialog, "Pilih chapter yang ingin dihapus!");
-                return;
-            }
-            Long chId = (Long) chModel.getValueAt(row, 0);
-            int confirm = JOptionPane.showConfirmDialog(dialog, "Yakin ingin menghapus chapter ini?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
-            if (confirm == JOptionPane.YES_OPTION) {
-                chapterService.deleteChapter(chId);
-                JOptionPane.showMessageDialog(dialog, "Chapter berhasil dihapus!");
-                loadChapters.run();
-            }
-        });
+        JLabel lblTotal = new JLabel("  Total Pendapatan: " + formatHarga(total) + "  (" + purchases.size() + " transaksi)");
+        lblTotal.setFont(new Font("Arial", Font.BOLD, 13));
+        lblTotal.setBorder(BorderFactory.createEmptyBorder(8, 5, 8, 5));
+        dialog.add(lblTotal, BorderLayout.SOUTH);
 
         dialog.setVisible(true);
+    }
+
+    private static String formatHarga(Double harga) {
+        double nilai = harga != null ? harga : 0.0;
+        return "Rp " + String.format("%,.0f", nilai);
     }
 }

@@ -17,7 +17,7 @@ public class User {
     private String password;
 
     @Column(nullable = false, length = 20)
-    private String role; // "ADMIN" atau "USER"
+    private String role; // "ADMIN" (penjual/pengelola toko) atau "USER" (pembeli)
 
     public User() {}
 

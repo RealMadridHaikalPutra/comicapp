@@ -25,7 +25,7 @@ public class RegisterForm extends JFrame {
     private JButton btnRegister, btnBack;
 
     public RegisterForm() {
-        setTitle("Registrasi Akun - Aplikasi Komik");
+        setTitle("Registrasi Akun - Toko Komik Digital");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);

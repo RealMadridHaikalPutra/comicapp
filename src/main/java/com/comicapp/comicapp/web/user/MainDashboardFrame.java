@@ -3,13 +3,11 @@ package com.comicapp.comicapp.web.user;
 import org.springframework.context.annotation.Lazy;
 import jakarta.annotation.PostConstruct;
 import com.comicapp.comicapp.model.Comic;
-import com.comicapp.comicapp.model.Chapter;
-import com.comicapp.comicapp.model.ReadingHistory;
+import com.comicapp.comicapp.model.Purchase;
 import com.comicapp.comicapp.model.User;
 import com.comicapp.comicapp.service.ComicService;
-import com.comicapp.comicapp.service.ChapterService;
 import com.comicapp.comicapp.service.FavoriteService;
-import com.comicapp.comicapp.service.ReadingHistoryService;
+import com.comicapp.comicapp.service.PurchaseService;
 import com.comicapp.comicapp.web.auth.LoginForm;
 import com.comicapp.comicapp.util.SessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,22 +25,20 @@ public class MainDashboardFrame extends JFrame {
     @Autowired
     private ComicService comicService;
     @Autowired
-    private ChapterService chapterService;
-    @Autowired
     private FavoriteService favoriteService;
     @Autowired
-    private ReadingHistoryService historyService;
+    private PurchaseService purchaseService;
     @Autowired
     private LoginForm loginForm;
 
-    private JTable tableCatalog, tableFavorite, tableHistory;
-    private DefaultTableModel modelCatalog, modelFavorite, modelHistory;
+    private JTable tableCatalog, tableFavorite, tablePurchase;
+    private DefaultTableModel modelCatalog, modelFavorite, modelPurchase;
     private JTextField txtSearch;
     private JComboBox<String> cbGenre;
     private JTabbedPane tabbedPane;
 
     public MainDashboardFrame() {
-        setTitle("Dashboard Pembaca - Aplikasi Baca Komik Digital");
+        setTitle("Dashboard Pembeli - Toko Komik Digital");
         setSize(950, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -67,7 +63,7 @@ public class MainDashboardFrame extends JFrame {
         topPanel.add(btnLogout, BorderLayout.EAST);
         add(topPanel, BorderLayout.NORTH);
 
-        // Tabbed Pane (Katalog, Favorit, Riwayat)
+        // Tabbed Pane (Katalog, Favorit, Pembelian)
         tabbedPane = new JTabbedPane();
 
         // --- TAB 1: KATALOG & PENCARIAN ---
@@ -83,35 +79,39 @@ public class MainDashboardFrame extends JFrame {
         searchPanel.add(btnSearch);
         panelCatalog.add(searchPanel, BorderLayout.NORTH);
 
-        modelCatalog = new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Penulis/Ilustrator", "Sinopsis"}, 0);
+        modelCatalog = new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Penulis/Ilustrator", "Harga", "Sinopsis"}, 0);
         tableCatalog = new JTable(modelCatalog);
         panelCatalog.add(new JScrollPane(tableCatalog), BorderLayout.CENTER);
 
         JPanel catalogActionPanel = new JPanel();
-        JButton btnDetail = new JButton("Lihat Detail & Chapter");
+        JButton btnDetail = new JButton("Lihat Detail");
+        JButton btnBuy = new JButton("Beli Komik");
         JButton btnFavorite = new JButton("Tambah ke Favorit");
         catalogActionPanel.add(btnDetail);
+        catalogActionPanel.add(btnBuy);
         catalogActionPanel.add(btnFavorite);
         panelCatalog.add(catalogActionPanel, BorderLayout.SOUTH);
         tabbedPane.addTab("Katalog Komik", panelCatalog);
 
-        // --- TAB 2: FAVORIT ---
+        // --- TAB 2: FAVORIT (WISHLIST) ---
         JPanel panelFavorite = new JPanel(new BorderLayout());
-        modelFavorite = new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Penulis"}, 0);
+        modelFavorite = new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Penulis", "Harga"}, 0);
         tableFavorite = new JTable(modelFavorite);
         panelFavorite.add(new JScrollPane(tableFavorite), BorderLayout.CENTER);
-        JButton btnRemoveFav = new JButton("Hapus dari Favorit");
         JPanel favBottom = new JPanel();
+        JButton btnBuyFromFav = new JButton("Beli Komik");
+        JButton btnRemoveFav = new JButton("Hapus dari Favorit");
+        favBottom.add(btnBuyFromFav);
         favBottom.add(btnRemoveFav);
         panelFavorite.add(favBottom, BorderLayout.SOUTH);
         tabbedPane.addTab("Komik Favorit", panelFavorite);
 
-        // --- TAB 3: RIWAYAT MEMBACA ---
-        JPanel panelHistory = new JPanel(new BorderLayout());
-        modelHistory = new DefaultTableModel(new String[]{"ID", "Judul Komik", "Chapter Terakhir", "Terakhir Dibaca"}, 0);
-        tableHistory = new JTable(modelHistory);
-        panelHistory.add(new JScrollPane(tableHistory), BorderLayout.CENTER);
-        tabbedPane.addTab("Riwayat Membaca", panelHistory);
+        // --- TAB 3: RIWAYAT PEMBELIAN ---
+        JPanel panelPurchase = new JPanel(new BorderLayout());
+        modelPurchase = new DefaultTableModel(new String[]{"ID", "Judul Komik", "Genre", "Harga", "Tanggal Pembelian"}, 0);
+        tablePurchase = new JTable(modelPurchase);
+        panelPurchase.add(new JScrollPane(tablePurchase), BorderLayout.CENTER);
+        tabbedPane.addTab("Riwayat Pembelian", panelPurchase);
 
         add(tabbedPane, BorderLayout.CENTER);
 
@@ -130,7 +130,7 @@ public class MainDashboardFrame extends JFrame {
             if (tabbedPane.getSelectedIndex() == 1) {
                 loadFavoriteData();
             } else if (tabbedPane.getSelectedIndex() == 2) {
-                loadHistoryData();
+                loadPurchaseData();
             }
         });
 
@@ -162,6 +162,32 @@ public class MainDashboardFrame extends JFrame {
             }
         });
 
+        btnBuyFromFav.addActionListener(e -> {
+            int row = tableFavorite.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(this, "Pilih komik dari daftar favorit!");
+                return;
+            }
+            Long comicId = (Long) modelFavorite.getValueAt(row, 0);
+            Comic comic = comicService.getComicById(comicId).orElse(null);
+            if (comic != null) {
+                beliKomik(comic);
+            }
+        });
+
+        btnBuy.addActionListener(e -> {
+            int row = tableCatalog.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(this, "Pilih komik yang ingin dibeli!");
+                return;
+            }
+            Long comicId = (Long) modelCatalog.getValueAt(row, 0);
+            Comic comic = comicService.getComicById(comicId).orElse(null);
+            if (comic != null) {
+                beliKomik(comic);
+            }
+        });
+
         btnDetail.addActionListener(e -> {
             int row = tableCatalog.getSelectedRow();
             if (row == -1) {
@@ -185,7 +211,7 @@ public class MainDashboardFrame extends JFrame {
     public void loadCatalogData(List<Comic> comics) {
         modelCatalog.setRowCount(0);
         for (Comic c : comics) {
-            modelCatalog.addRow(new Object[]{c.getId(), c.getTitle(), c.getGenre(), c.getAuthorOrIllustrator(), c.getSynopsis()});
+            modelCatalog.addRow(new Object[]{c.getId(), c.getTitle(), c.getGenre(), c.getAuthorOrIllustrator(), formatHarga(c.getPrice()), c.getSynopsis()});
         }
     }
 
@@ -195,66 +221,95 @@ public class MainDashboardFrame extends JFrame {
         if (user != null) {
             List<Comic> favs = favoriteService.getFavoriteComicsByUserId(user.getId());
             for (Comic c : favs) {
-                modelFavorite.addRow(new Object[]{c.getId(), c.getTitle(), c.getGenre(), c.getAuthorOrIllustrator()});
+                modelFavorite.addRow(new Object[]{c.getId(), c.getTitle(), c.getGenre(), c.getAuthorOrIllustrator(), formatHarga(c.getPrice())});
             }
         }
     }
 
-    public void loadHistoryData() {
-        modelHistory.setRowCount(0);
+    public void loadPurchaseData() {
+        modelPurchase.setRowCount(0);
         User user = SessionManager.getLoggedInUser();
         if (user != null) {
-            List<ReadingHistory> histories = historyService.getHistoryByUserId(user.getId());
-            for (ReadingHistory h : histories) {
-                modelHistory.addRow(new Object[]{
-                    h.getComic().getId(),
-                    h.getComic().getTitle(),
-                    "Chapter " + h.getLastChapter().getChapterNumber() + " - " + h.getLastChapter().getTitle(),
-                    h.getUpdatedAt().toString()
+            List<Purchase> purchases = purchaseService.getPurchasesByUserId(user.getId());
+            for (Purchase p : purchases) {
+                modelPurchase.addRow(new Object[]{
+                    p.getId(),
+                    p.getComic().getTitle(),
+                    p.getComic().getGenre(),
+                    formatHarga(p.getPrice()),
+                    p.getPurchasedAt().toString()
                 });
             }
         }
     }
 
+    private void beliKomik(Comic comic) {
+        User user = SessionManager.getLoggedInUser();
+        if (user == null) {
+            return;
+        }
+
+        if (purchaseService.hasPurchased(user.getId(), comic.getId())) {
+            JOptionPane.showMessageDialog(this, "Komik ini sudah pernah Anda beli.");
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Beli komik \"" + comic.getTitle() + "\" seharga " + formatHarga(comic.getPrice()) + "?",
+                "Konfirmasi Pembelian",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            purchaseService.purchase(user, comic);
+            JOptionPane.showMessageDialog(this, "Pembelian berhasil!\nKomik tersedia pada tab Riwayat Pembelian.");
+            loadPurchaseData();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Pembelian Gagal", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void showComicDetailDialog(Comic comic) {
         JDialog dialog = new JDialog(this, "Detail Komik: " + comic.getTitle(), true);
-        dialog.setSize(550, 450);
+        dialog.setSize(550, 400);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
 
-        JPanel infoPanel = new JPanel(new GridLayout(4, 1, 5, 5));
+        JPanel infoPanel = new JPanel(new GridLayout(5, 1, 5, 5));
         infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         infoPanel.add(new JLabel(" Judul: " + comic.getTitle()));
         infoPanel.add(new JLabel(" Genre: " + comic.getGenre()));
         infoPanel.add(new JLabel(" Penulis/Ilustrator: " + comic.getAuthorOrIllustrator()));
+        infoPanel.add(new JLabel(" Harga: " + formatHarga(comic.getPrice())));
         infoPanel.add(new JLabel(" Sinopsis: " + comic.getSynopsis()));
         dialog.add(infoPanel, BorderLayout.NORTH);
 
-        List<Chapter> chapters = chapterService.getChaptersByComicId(comic.getId());
-        DefaultTableModel chapterModel = new DefaultTableModel(new String[]{"ID", "No. Chapter", "Judul Chapter"}, 0);
-        for (Chapter ch : chapters) {
-            chapterModel.addRow(new Object[]{ch.getId(), ch.getChapterNumber(), ch.getTitle()});
-        }
-        JTable tableChapter = new JTable(chapterModel);
-        dialog.add(new JScrollPane(tableChapter), BorderLayout.CENTER);
+        User user = SessionManager.getLoggedInUser();
+        boolean sudahDibeli = user != null && purchaseService.hasPurchased(user.getId(), comic.getId());
 
-        JButton btnRead = new JButton("Baca Chapter Dipilih (Simpan ke Riwayat)");
-        dialog.add(btnRead, BorderLayout.SOUTH);
+        JPanel actionPanel = new JPanel();
+        JButton btnBuy = new JButton("Beli Komik");
+        btnBuy.setEnabled(!sudahDibeli);
+        JLabel lblStatus = new JLabel(sudahDibeli ? "Sudah Anda beli" : "");
+        actionPanel.add(lblStatus);
+        actionPanel.add(btnBuy);
+        dialog.add(actionPanel, BorderLayout.SOUTH);
 
-        btnRead.addActionListener(e -> {
-            int row = tableChapter.getSelectedRow();
-            if (row == -1) {
-                JOptionPane.showMessageDialog(dialog, "Pilih chapter yang ingin dibaca!");
-                return;
-            }
-            Long chId = (Long) chapterModel.getValueAt(row, 0);
-            Chapter chapter = chapterService.getChapterById(chId).orElse(null);
-            if (chapter != null && SessionManager.getLoggedInUser() != null) {
-                historyService.saveOrUpdateHistory(SessionManager.getLoggedInUser(), comic, chapter);
-                JOptionPane.showMessageDialog(dialog, "Membaca Chapter " + chapter.getChapterNumber() + "\nRiwayat membaca berhasil diperbarui otomatis!");
-            }
+        btnBuy.addActionListener(e -> {
+            beliKomik(comic);
+            btnBuy.setEnabled(false);
+            lblStatus.setText("Sudah Anda beli");
         });
 
         dialog.setVisible(true);
+    }
+
+    private static String formatHarga(Double harga) {
+        double nilai = harga != null ? harga : 0.0;
+        return "Rp " + String.format("%,.0f", nilai);
     }
 }

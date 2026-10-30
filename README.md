@@ -1,6 +1,6 @@
-# 📚 Aplikasi Baca Komik Digital
+# 🛒 Aplikasi Jual Beli Komik Digital
 
-Aplikasi desktop untuk membaca dan mengelola konten komik digital, dibangun dengan **Java Swing** sebagai antarmuka grafis dan **Spring Boot** sebagai backend, dengan penyimpanan data menggunakan **MySQL**.
+Aplikasi desktop untuk menjual dan membeli komik digital, dibangun dengan **Java Swing** sebagai antarmuka grafis dan **Spring Boot** sebagai backend, dengan penyimpanan data menggunakan **PostgreSQL**.
 
 ---
 
@@ -11,7 +11,7 @@ Aplikasi desktop untuk membaca dan mengelola konten komik digital, dibangun deng
 | Bahasa Pemrograman | Java 17 |
 | Framework Backend | Spring Boot 3.3.4 |
 | ORM / Database Access | Spring Data JPA (Hibernate) |
-| Database | MySQL |
+| Database | PostgreSQL |
 | GUI | Java Swing |
 | Build Tool | Apache Maven |
 | Utilitas | Lombok |
@@ -27,31 +27,28 @@ comicapp/
 │       ├── java/com/comicapp/comicapp/
 │       │   ├── ComicappApplication.java       # Entry point aplikasi
 │       │   ├── model/
-│       │   │   ├── User.java                  # Entity pengguna
-│       │   │   ├── Comic.java                 # Entity komik
-│       │   │   ├── Chapter.java               # Entity chapter
-│       │   │   ├── Favorite.java              # Entity favorit
-│       │   │   └── ReadingHistory.java        # Entity riwayat baca
+│       │   │   ├── User.java                  # Entity pengguna (admin/pembeli)
+│       │   │   ├── Comic.java                 # Entity komik (produk digital + harga)
+│       │   │   ├── Favorite.java              # Entity wishlist pembeli
+│       │   │   └── Purchase.java              # Entity transaksi pembelian
 │       │   ├── repository/
 │       │   │   ├── UserRepository.java
 │       │   │   ├── ComicRepository.java
-│       │   │   ├── ChapterRepository.java
 │       │   │   ├── FavoriteRepository.java
-│       │   │   └── ReadingHistoryRepository.java
+│       │   │   └── PurchaseRepository.java
 │       │   ├── service/
 │       │   │   ├── UserService.java
 │       │   │   ├── ComicService.java
-│       │   │   ├── ChapterService.java
 │       │   │   ├── FavoriteService.java
-│       │   │   └── ReadingHistoryService.java
+│       │   │   └── PurchaseService.java
 │       │   ├── web/
 │       │   │   ├── auth/
 │       │   │   │   ├── LoginForm.java         # Form login (JFrame)
 │       │   │   │   └── RegisterForm.java      # Form registrasi (JFrame)
 │       │   │   ├── admin/
-│       │   │   │   └── AdminDashboardFrame.java  # Dashboard admin (JFrame)
+│       │   │   │   └── AdminDashboardFrame.java  # Dashboard penjual (JFrame)
 │       │   │   └── user/
-│       │   │       └── MainDashboardFrame.java   # Dashboard user (JFrame)
+│       │   │       └── MainDashboardFrame.java   # Dashboard pembeli (JFrame)
 │       │   └── util/
 │       │       └── SessionManager.java        # Manajemen sesi login
 │       └── resources/
@@ -67,7 +64,7 @@ Pastikan perangkat kamu sudah terinstal:
 
 - **Java Development Kit (JDK) 17** atau lebih baru
 - **Apache Maven 3.6+** (atau gunakan `./mvnw` yang sudah disertakan)
-- **MySQL Server 8.0+**
+- **PostgreSQL 14+**
 - **IDE** yang direkomendasikan: IntelliJ IDEA / NetBeans / Eclipse
 
 ---
@@ -81,9 +78,9 @@ git clone https://github.com/username/comicapp.git
 cd comicapp
 ```
 
-### 2. Buat Database MySQL
+### 2. Buat Database PostgreSQL
 
-Buka MySQL client (MySQL Workbench, HeidiSQL, atau terminal) dan jalankan:
+Buka PostgreSQL client (pgAdmin atau terminal) dan jalankan:
 
 ```sql
 CREATE DATABASE db_comicapp;
@@ -93,17 +90,17 @@ CREATE DATABASE db_comicapp;
 
 ### 3. Konfigurasi Koneksi Database
 
-Edit file `src/main/resources/application.properties` sesuaikan dengan konfigurasi MySQL kamu:
+Edit file `src/main/resources/application.properties` sesuaikan dengan konfigurasi PostgreSQL kamu:
 
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/db_comicapp?useSSL=false&serverTimezone=UTC
-spring.datasource.username=root
+spring.datasource.url=jdbc:postgresql://localhost:5432/db_comicapp
+spring.datasource.username=postgres
 spring.datasource.password=PASSWORD_KAMU
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.driver-class-name=org.postgresql.Driver
 
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 ```
 
 ### 4. Build dan Jalankan
@@ -139,17 +136,18 @@ java -jar target/comicapp-0.0.1-SNAPSHOT.jar
 
 Aplikasi ini memiliki dua role pengguna:
 
-### 🔑 ADMIN
+### 🔑 ADMIN (Penjual / Pengelola Toko)
 
-- Menambah, mengubah, dan menghapus data komik
-- Mengelola chapter (tambah / hapus) untuk setiap komik
-- Melihat seluruh daftar komik
+- Menambah, mengubah, dan menghapus produk komik
+- Menentukan harga jual setiap komik
+- Melihat data penjualan beserta total pendapatan
 
-### 📖 USER
+### 🛍️ USER (Pembeli)
 
 - Melihat dan mencari katalog komik berdasarkan judul atau genre
-- Menambah dan menghapus komik dari daftar favorit
-- Membaca chapter dan riwayat membaca tercatat otomatis
+- Melihat detail komik beserta harga
+- Membeli komik dan melihat riwayat pembelian
+- Menambah dan menghapus komik dari daftar favorit (wishlist)
 
 ---
 
@@ -162,12 +160,12 @@ Aplikasi ini memiliki dua role pengguna:
   ├── Belum punya akun? → [Form Registrasi] → kembali ke Login
   └── Login berhasil
        ├── Role ADMIN → [Dashboard Admin]
-       │     ├── Tambah / Ubah / Hapus Komik
-       │     └── Kelola Chapter per Komik
-       └── Role USER → [Dashboard User]
-             ├── Tab Katalog  : Cari & filter komik, tambah favorit, lihat detail & chapter
-             ├── Tab Favorit  : Lihat & hapus komik favorit
-             └── Tab Riwayat : Lihat riwayat chapter yang pernah dibaca
+       │     ├── Tambah / Ubah / Hapus Komik (termasuk harga)
+       │     └── Data Penjualan (daftar transaksi & total pendapatan)
+       └── Role USER → [Dashboard Pembeli]
+             ├── Tab Katalog        : Cari & filter komik, lihat detail, tambah favorit, beli komik
+             ├── Tab Favorit        : Lihat, beli, & hapus komik dari wishlist
+             └── Tab Pembelian      : Lihat riwayat pembelian komik
 ```
 
 ---
@@ -179,16 +177,17 @@ Hibernate akan otomatis membuat tabel berikut:
 | Tabel | Deskripsi |
 | --- | --- |
 | `users` | Data akun pengguna (username, password, role) |
-| `comics` | Data komik (judul, genre, penulis, sinopsis, cover URL) |
-| `chapters` | Data chapter yang berelasi ke komik |
-| `favorites` | Relasi many-to-many antara user dan komik favorit |
-| `reading_histories` | Riwayat membaca: user, komik, chapter terakhir, waktu |
+| `comics` | Data komik (judul, genre, penulis, sinopsis, cover URL, harga) |
+| `favorites` | Relasi many-to-many antara user dan komik pada wishlist |
+| `purchases` | Transaksi pembelian: user (pembeli), komik, harga saat dibeli, waktu pembelian |
 
 ---
 
 ## 📌 Catatan Pengembangan
 
 - Password pengguna saat ini disimpan dalam bentuk **plain text**. Untuk lingkungan produksi, gunakan enkripsi seperti **BCrypt**.
+- Satu komik hanya bisa dibeli satu kali oleh user yang sama (dicek pada `PurchaseService`).
+- Harga disimpan pada harga saat transaksi terjadi, sehingga perubahan harga komik tidak mengubah riwayat pembelian.
 - `SessionManager` menggunakan variabel statis — cocok untuk aplikasi desktop single-user.
 - Semua komponen GUI (`JFrame`) didaftarkan sebagai Spring `@Component` dengan `@Lazy` agar tidak diinisialisasi sebelum waktunya.
 

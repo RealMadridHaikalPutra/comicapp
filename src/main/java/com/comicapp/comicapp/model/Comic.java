@@ -1,7 +1,6 @@
 package com.comicapp.comicapp.model;
 
 import jakarta.persistence.*;
-import java.util.List;
 
 @Entity
 @Table(name = "comics")
@@ -26,8 +25,8 @@ public class Comic {
     @Column(name = "cover_url")
     private String coverUrl;
 
-    @OneToMany(mappedBy = "comic", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Chapter> chapters;
+    @Column(name = "price")
+    private Double price = 0.0;
 
     public Comic() {}
 
@@ -49,6 +48,6 @@ public class Comic {
     public String getCoverUrl() { return coverUrl; }
     public void setCoverUrl(String coverUrl) { this.coverUrl = coverUrl; }
 
-    public List<Chapter> getChapters() { return chapters; }
-    public void setChapters(List<Chapter> chapters) { this.chapters = chapters; }
+    public Double getPrice() { return price != null ? price : 0.0; }
+    public void setPrice(Double price) { this.price = price; }
 }

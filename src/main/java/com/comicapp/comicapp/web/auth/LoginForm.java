@@ -34,7 +34,7 @@ public class LoginForm extends JFrame {
     private JButton btnLogin, btnToRegister;
 
     public LoginForm() {
-        setTitle("Login - Aplikasi Baca Komik Digital");
+        setTitle("Login - Toko Komik Digital");
         setSize(400, 250);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
