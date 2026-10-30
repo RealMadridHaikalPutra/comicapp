@@ -16,9 +16,13 @@ public class Favorite {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "comic_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Comic comic;
 }

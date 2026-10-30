@@ -4,8 +4,9 @@ import org.springframework.context.annotation.Lazy;
 import com.comicapp.comicapp.model.User;
 import com.comicapp.comicapp.service.UserService;
 import com.comicapp.comicapp.util.SessionManager;
-import com.comicapp.comicapp.web.user.MainDashboardFrame;   // <--- Perhatikan import ini
-import com.comicapp.comicapp.web.admin.AdminDashboardFrame; // <--- Perhatikan import ini
+import com.comicapp.comicapp.web.user.MainDashboardFrame;
+import com.comicapp.comicapp.web.admin.AdminDashboardFrame;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -13,20 +14,20 @@ import javax.swing.*;
 import java.awt.*;
 
 @Component
-@Lazy // <--- Tambahkan anotasi ini agar tidak dimuat terlalu dini
+@Lazy
 public class LoginForm extends JFrame {
 
     @Autowired
     private UserService userService;
 
     @Autowired
-    private RegisterForm registerForm;
+    private ObjectProvider<RegisterForm> registerFormProvider;
 
     @Autowired
-    private MainDashboardFrame mainDashboardFrame;
+    private ObjectProvider<MainDashboardFrame> mainDashboardProvider;
 
     @Autowired
-    private AdminDashboardFrame adminDashboardFrame;
+    private ObjectProvider<AdminDashboardFrame> adminDashboardProvider;
 
     private JTextField txtUsername;
     private JPasswordField txtPassword;
@@ -53,7 +54,7 @@ public class LoginForm extends JFrame {
 
         btnToRegister = new JButton("Register Akun");
         btnLogin = new JButton("Login");
-        
+
         add(btnToRegister);
         add(btnLogin);
 
@@ -70,17 +71,15 @@ public class LoginForm extends JFrame {
             try {
                 User user = userService.login(username, password);
                 SessionManager.setLoggedInUser(user);
-                
+
                 JOptionPane.showMessageDialog(this, "Login Berhasil! Selamat datang, " + user.getUsername() + " (" + user.getRole() + ")");
                 this.dispose();
 
                 // Arahkan berdasarkan Role
                 if (user.getRole().equalsIgnoreCase("ADMIN")) {
-                    this.dispose();
-                    adminDashboardFrame.setVisible(true);
+                    adminDashboardProvider.getObject().setVisible(true);
                 } else {
-                    this.dispose();
-                    mainDashboardFrame.setVisible(true);
+                    mainDashboardProvider.getObject().setVisible(true);
                 }
 
             } catch (Exception ex) {
@@ -90,8 +89,8 @@ public class LoginForm extends JFrame {
 
         // Event Listener Pindah ke Register
         btnToRegister.addActionListener(e -> {
-            this.dispose();
-            registerForm.setVisible(true);
+            this.setVisible(false);
+            registerFormProvider.getObject().setVisible(true);
         });
     }
 }

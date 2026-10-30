@@ -1,6 +1,7 @@
 package com.comicapp.comicapp.web.admin;
 
 import org.springframework.context.annotation.Lazy;
+import jakarta.annotation.PostConstruct;
 import com.comicapp.comicapp.model.Comic;
 import com.comicapp.comicapp.model.Chapter;
 import com.comicapp.comicapp.model.User;
@@ -35,6 +36,10 @@ public class AdminDashboardFrame extends JFrame {
         setSize(900, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+    }
+
+    @PostConstruct
+    private void initialize() {
         initComponents();
     }
 

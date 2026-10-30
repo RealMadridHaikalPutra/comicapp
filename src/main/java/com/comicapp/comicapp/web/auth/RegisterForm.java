@@ -1,6 +1,7 @@
 package com.comicapp.comicapp.web.auth;
 
 import org.springframework.context.annotation.Lazy;
+import org.springframework.beans.factory.ObjectProvider;
 import com.comicapp.comicapp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -16,7 +17,7 @@ public class RegisterForm extends JFrame {
     private UserService userService;
 
     @Autowired
-    private LoginForm loginForm;
+    private ObjectProvider<LoginForm> loginFormProvider;
 
     private JTextField txtUsername;
     private JPasswordField txtPassword;
@@ -53,29 +54,45 @@ public class RegisterForm extends JFrame {
 
         // Event Listener Register
         btnRegister.addActionListener(e -> {
-            String username = txtUsername.getText().trim();
-            String password = new String(txtPassword.getPassword()).trim();
-            String role = (String) cbRole.getSelectedItem();
+        String username = txtUsername.getText().trim();
+        String password = new String(txtPassword.getPassword()).trim();
+        String role = (String) cbRole.getSelectedItem();
 
-            if (username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Username dan Password tidak boleh kosong!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+        if (username.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Username dan Password tidak boleh kosong!",
+                "Error",
+                JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
 
-            try {
-                userService.register(username, password, role);
-                JOptionPane.showMessageDialog(this, "Registrasi berhasil! Silakan login.");
-                this.dispose();
-                loginForm.setVisible(true);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "Gagal Registrasi", JOptionPane.ERROR_MESSAGE);
-            }
-        });
+        try {
+            userService.register(username, password, role);
+
+            JOptionPane.showMessageDialog(
+                this,
+                "Registrasi berhasil! Silakan login."
+            );
+
+            this.setVisible(false);
+            loginFormProvider.getObject().setVisible(true);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                this,
+                ex.getMessage(),
+                "Gagal Registrasi",
+                JOptionPane.ERROR_MESSAGE
+            );
+        }
+    });
 
         // Event Listener Tombol Kembali
         btnBack.addActionListener(e -> {
-            this.dispose();
-            loginForm.setVisible(true);
+            this.setVisible(false);
+            loginFormProvider.getObject().setVisible(true);
         });
     }
 }
