@@ -30,9 +30,33 @@
 		<java.version>17</java.version>
 	</properties>
 	<dependencies>
+		<!-- Spring Context (IoC container) untuk dependency injection & component scanning -->
+		<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
 		<dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+		<!-- Spring AOP + AspectJ untuk aspek logging dan monitoring performa -->
+		<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
+		<!-- Spring Web MVC: controller + halaman web di samping aplikasi Swing -->
+		<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+		<!-- Thymeleaf sebagai view template engine pada lapisan MVC -->
+		<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
 
 		<!-- <dependency>

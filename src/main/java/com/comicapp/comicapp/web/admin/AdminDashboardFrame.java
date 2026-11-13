@@ -58,7 +58,7 @@ public class AdminDashboardFrame extends JFrame {
         add(topPanel, BorderLayout.NORTH);
 
         // Center Panel: Comic Table
-        modelComic = new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Penulis/Ilustrator", "Harga", "Sinopsis"}, 0);
+        modelComic = new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Penulis/Ilustrator", "Harga", "Stock", "Sinopsis"}, 0);
         tableComic = new JTable(modelComic);
         add(new JScrollPane(tableComic), BorderLayout.CENTER);
 
@@ -121,7 +121,7 @@ public class AdminDashboardFrame extends JFrame {
         modelComic.setRowCount(0);
         List<Comic> comics = comicService.getAllComics();
         for (Comic c : comics) {
-            modelComic.addRow(new Object[]{c.getId(), c.getTitle(), c.getGenre(), c.getAuthorOrIllustrator(), formatHarga(c.getPrice()), c.getSynopsis()});
+            modelComic.addRow(new Object[]{c.getId(), c.getTitle(), c.getGenre(), c.getAuthorOrIllustrator(), formatHarga(c.getPrice()), c.getStock(), c.getSynopsis()});
         }
     }
 
@@ -129,13 +129,14 @@ public class AdminDashboardFrame extends JFrame {
         JDialog dialog = new JDialog(this, existingComic == null ? "Tambah Komik" : "Ubah Komik", true);
         dialog.setSize(400, 380);
         dialog.setLocationRelativeTo(this);
-        dialog.setLayout(new GridLayout(7, 2, 5, 5));
+        dialog.setLayout(new GridLayout(8, 2, 5, 5));
 
         JTextField txtTitle = new JTextField(existingComic != null ? existingComic.getTitle() : "");
         JTextField txtGenre = new JTextField(existingComic != null ? existingComic.getGenre() : "");
         JTextField txtAuthor = new JTextField(existingComic != null ? existingComic.getAuthorOrIllustrator() : "");
         JTextField txtCover = new JTextField(existingComic != null ? existingComic.getCoverUrl() : "");
         JTextField txtPrice = new JTextField(existingComic != null ? String.valueOf(existingComic.getPrice()) : "");
+        JTextField txtStock = new JTextField(existingComic != null ? String.valueOf(existingComic.getStock()) : "");
         JTextArea txtSynopsis = new JTextArea(existingComic != null ? existingComic.getSynopsis() : "");
 
         dialog.add(new JLabel(" Judul:"));
@@ -148,6 +149,8 @@ public class AdminDashboardFrame extends JFrame {
         dialog.add(txtCover);
         dialog.add(new JLabel(" Harga (Rp):"));
         dialog.add(txtPrice);
+        dialog.add(new JLabel(" Stok:"));
+        dialog.add(txtStock);
         dialog.add(new JLabel(" Sinopsis:"));
         dialog.add(new JScrollPane(txtSynopsis));
 
@@ -174,6 +177,7 @@ public class AdminDashboardFrame extends JFrame {
             comic.setAuthorOrIllustrator(txtAuthor.getText().trim());
             comic.setCoverUrl(txtCover.getText().trim());
             comic.setPrice(price);
+            comic.setStock(Integer.parseInt(txtStock.getText().trim()));
             comic.setSynopsis(txtSynopsis.getText().trim());
 
             comicService.saveComic(comic);
@@ -191,7 +195,7 @@ public class AdminDashboardFrame extends JFrame {
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
 
-        DefaultTableModel salesModel = new DefaultTableModel(new String[]{"ID", "Pembeli", "Judul Komik", "Harga", "Tanggal Pembelian"}, 0);
+        DefaultTableModel salesModel = new DefaultTableModel(new String[]{"ID", "Pembeli", "Judul Komik", "Harga", "Stock", "Tanggal Pembelian"}, 0);
         JTable salesTable = new JTable(salesModel);
         dialog.add(new JScrollPane(salesTable), BorderLayout.CENTER);
 
@@ -203,6 +207,7 @@ public class AdminDashboardFrame extends JFrame {
                 p.getUser().getUsername(),
                 p.getComic().getTitle(),
                 formatHarga(p.getPrice()),
+                p.getQuantity(),
                 p.getPurchasedAt().toString()
             });
             if (p.getPrice() != null) {

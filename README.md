@@ -11,8 +11,11 @@ Aplikasi desktop untuk menjual dan membeli komik digital, dibangun dengan **Java
 | Bahasa Pemrograman | Java 17 |
 | Framework Backend | Spring Boot 3.3.4 |
 | ORM / Database Access | Spring Data JPA (Hibernate) |
+| Pola DAO | DAO interface + implementasi di atas repository JPA |
+| AOP | Spring AOP + AspectJ |
+| Web MVC | Spring Web MVC + Thymeleaf |
 | Database | PostgreSQL |
-| GUI | Java Swing |
+| GUI Desktop | Java Swing |
 | Build Tool | Apache Maven |
 | Utilitas | Lombok |
 
@@ -41,7 +44,21 @@ comicapp/
 │       │   │   ├── ComicService.java
 │       │   │   ├── FavoriteService.java
 │       │   │   └── PurchaseService.java
+│       │   ├── dao/
+│       │   │   ├── UserDao.java               # Kontrak akses data User
+│       │   │   ├── ComicDao.java              # Kontrak akses data Comic
+│       │   │   ├── FavoriteDao.java           # Kontrak akses data Favorite
+│       │   │   ├── PurchaseDao.java           # Kontrak akses data Purchase
+│       │   │   └── impl/                      # Implementasi DAO di atas JPA repository
+│       │   ├── aspect/
+│       │   │   ├── LoggingAspect.java         # AOP logging lapisan service
+│       │   │   └── PerformanceAspect.java     # AOP pengukur durasi method service
 │       │   ├── web/
+│       │   │   ├── controller/                # Controller Spring MVC (web)
+│       │   │   │   ├── AuthController.java
+│       │   │   │   ├── CatalogController.java
+│       │   │   │   ├── UserController.java
+│       │   │   │   └── AdminController.java
 │       │   │   ├── auth/
 │       │   │   │   ├── LoginForm.java         # Form login (JFrame)
 │       │   │   │   └── RegisterForm.java      # Form registrasi (JFrame)
@@ -52,7 +69,16 @@ comicapp/
 │       │   └── util/
 │       │       └── SessionManager.java        # Manajemen sesi login
 │       └── resources/
-│           └── application.properties         # Konfigurasi database
+│           ├── application.properties         # Konfigurasi database
+│           ├── static/css/style.css           # Stylesheet halaman web
+│           └── templates/                     # View Thymeleaf (Spring MVC)
+│               ├── login.html
+│               ├── register.html
+│               ├── catalog.html
+│               ├── detail.html
+│               ├── favorites.html
+│               ├── purchases.html
+│               └── admin/
 └── pom.xml
 ```
 
@@ -182,6 +208,43 @@ Hibernate akan otomatis membuat tabel berikut:
 | `purchases` | Transaksi pembelian: user (pembeli), komik, harga saat dibeli, waktu pembelian |
 
 ---
+
+## 🧱 Implementasi DAO (Data Access Object)
+
+Akses data dipisahkan dari logika bisnis melalui lapisan DAO:
+
+- Setiap entity memiliki kontrak DAO (`UserDao`, `ComicDao`, `FavoriteDao`, `PurchaseDao`) di paket `dao/`.
+- Implementasi (`dao/impl/*DaoImpl`) mendelegasikan operasi ke Spring Data JPA repository.
+- `Service` hanya bergantung pada DAO, bukan langsung ke repository, sehingga detail persistensi mudah diganti tanpa mengubah controller maupun tampilan.
+- Signature method service dan perilaku aplikasi tetap sama seperti sebelumnya.
+
+## 🌐 Implementasi Spring MVC (Web)
+
+Selain aplikasi desktop Swing, proyek menyediakan antarmuka web dengan pola MVC:
+
+- **Model**: entity JPA dan service (`User`, `Comic`, `Favorite`, `Purchase`).
+- **View**: template Thymeleaf di `src/main/resources/templates/` (login, register, katalog, detail, favorit, pembelian, dan panel admin).
+- **Controller**: `AuthController`, `CatalogController`, `UserController`, dan `AdminController` memetakan URL ke service lalu memilih view.
+- Login web memakai `HttpSession` dan berbagi service yang sama dengan aplikasi Swing, sehingga data konsisten di kedua antarmuka.
+- Aplikasi web berjalan di `http://localhost:8080` bersamaan dengan form login Swing saat aplikasi dijalankan.
+
+## 🧩 Implementasi ORM (Object-Relational Mapping)
+
+ORM diterapkan dengan **Spring Data JPA + Hibernate**, sehingga kode Java tidak perlu menulis SQL manual:
+
+- **Entity** (`User`, `Comic`, `Favorite`, `Purchase`) dipetakan ke tabel lewat `@Entity`, `@Table`, `@Column`, dan `@Id`.
+- **Relasi antar tabel** memakai `@ManyToOne` / `@JoinColumn`, ditambah relasi balik `@OneToMany` dengan `cascade` dan `orphanRemoval` pada `User` dan `Comic`.
+- **Repository** turunan `JpaRepository` menyediakan operasi CRUD (`save`, `findById`, `findAll`, `deleteById`) dan *derived query* (`findByUsername`, `existsByUserIdAndComicId`, dan sebagainya).
+- **EntityGraph** pada `FavoriteRepository` dan `PurchaseRepository` mengambil relasi `comic`/`user` dalam satu query (fetch join) untuk menghindari masalah N+1.
+- **Lifecycle callback** `@PrePersist` / `@PreUpdate` pada `Purchase` mengisi `purchasedAt` secara otomatis bila kosong.
+
+## 🎯 Implementasi AOP (Aspect-Oriented Programming)
+
+AOP dipakai untuk kebutuhan lintas-potong (*cross-cutting concern*) tanpa menyentuh kode bisnis:
+
+- `LoggingAspect` mencatat setiap pemanggilan method pada bean `@Service` (masuk, berhasil, dan gagal).
+- `PerformanceAspect` mengukur durasi eksekusi method service dan memberi peringatan bila melebihi 1 detik.
+- Aspect diaktifkan otomatis oleh Spring Boot melalui dependency `spring-boot-starter-aop`; method pada `service/` tidak diubah sama sekali.
 
 ## 📌 Catatan Pengembangan
 

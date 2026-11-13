@@ -32,6 +32,19 @@ public class Purchase {
     @Column(name = "price", nullable = false)
     private Double price;
 
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity;
+
     @Column(name = "purchased_at", nullable = false)
     private LocalDateTime purchasedAt;
+
+    // Lifecycle callback ORM: waktu pembelian otomatis diisi Hibernate
+    // sebelum INSERT/UPDATE jika belum diset oleh pemanggil.
+    @PrePersist
+    @PreUpdate
+    private void isiWaktuPembelian() {
+        if (purchasedAt == null) {
+            purchasedAt = LocalDateTime.now();
+        }
+    }
 }
