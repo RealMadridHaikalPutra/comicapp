@@ -5,6 +5,7 @@ import jakarta.annotation.PostConstruct;
 import com.comicapp.comicapp.model.Comic;
 import com.comicapp.comicapp.model.Purchase;
 import com.comicapp.comicapp.model.User;
+import com.comicapp.comicapp.reports.PurchaseReportPdf;
 import com.comicapp.comicapp.service.ComicService;
 import com.comicapp.comicapp.service.PurchaseService;
 import com.comicapp.comicapp.web.auth.LoginForm;
@@ -218,7 +219,18 @@ public class AdminDashboardFrame extends JFrame {
         JLabel lblTotal = new JLabel("  Total Pendapatan: " + formatHarga(total) + "  (" + purchases.size() + " transaksi)");
         lblTotal.setFont(new Font("Arial", Font.BOLD, 13));
         lblTotal.setBorder(BorderFactory.createEmptyBorder(8, 5, 8, 5));
-        dialog.add(lblTotal, BorderLayout.SOUTH);
+
+        // Tombol print riwayat pembelian: membuat PDF dari template reports/template_purchase.jrxml
+        JButton btnPrint = new JButton("Print (PDF)");
+        JPanel panelPrint = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panelPrint.add(btnPrint);
+
+        JPanel panelBawah = new JPanel(new BorderLayout());
+        panelBawah.add(lblTotal, BorderLayout.WEST);
+        panelBawah.add(panelPrint, BorderLayout.EAST);
+        dialog.add(panelBawah, BorderLayout.SOUTH);
+
+        btnPrint.addActionListener(e -> PurchaseReportPdf.save(dialog, purchases));
 
         dialog.setVisible(true);
     }

@@ -77,6 +77,20 @@
             <optional>true</optional>
         </dependency>
 
+		<!-- JasperReports: mencetak laporan penjualan memakai template di package reports -->
+		<dependency>
+			<groupId>net.sf.jasperreports</groupId>
+			<artifactId>jasperreports</artifactId>
+			<version>7.0.8</version>
+		</dependency>
+
+		<!-- Modul exporter PDF (dipisah dari core sejak JasperReports 7) -->
+		<dependency>
+			<groupId>net.sf.jasperreports</groupId>
+			<artifactId>jasperreports-pdf</artifactId>
+			<version>7.0.8</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -85,6 +99,19 @@
 	</dependencies>
 
 	<build>
+		<!-- Salin template laporan (.jrxml) dari package reports ke classpath -->
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+			<resource>
+				<directory>src/main/java</directory>
+				<includes>
+					<include>**/*.jrxml</include>
+				</includes>
+			</resource>
+		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
